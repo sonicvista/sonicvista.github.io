@@ -1,0 +1,130 @@
+{
+  "layout": "sky_support_occluders",
+  "source": "3d/background/background_v1/lifting_marble/background.ply",
+  "panorama": "3d/background/background_v1/outpainting/pano_outpainted.png",
+  "panorama_size_wh": [
+    2048,
+    1024
+  ],
+  "panorama_source_size_wh": [
+    2048,
+    1024
+  ],
+  "environment": "indoor",
+  "environment_source": "understanding.json",
+  "prompts": {
+    "sky": [],
+    "support": [
+      "blue foam mat"
+    ]
+  },
+  "support_surface_names": {
+    "0": "blue foam mat",
+    "1": "blue foam mat"
+  },
+  "support_surface_source": "understanding.json",
+  "threshold": 0.3,
+  "per_label": {
+    "blue foam mat": {
+      "masks": 9,
+      "kept": 9,
+      "pixels": 864937
+    }
+  },
+  "panorama_fraction": {
+    "sky": 0.0,
+    "support_semantic": 0.41243410110473633
+  },
+  "support_geometry_enabled": true,
+  "support_geometry": {
+    "0": {
+      "seed_splats": 337554,
+      "semantic_used": true,
+      "semantic_seed_fraction": 1.0,
+      "seed_splats_on_semantic": 337554,
+      "grown_splats": 737461,
+      "support_splats": 741938,
+      "status": "ok",
+      "object_diameter_raw": 2.305399608979693,
+      "contact_points": 27200,
+      "support_surface": "blue foam mat",
+      "object_diagonal_world": 0.3746826418563433,
+      "view_splats_in_front": 720,
+      "view_occluders_in_front_after_rescue": 0,
+      "rescued_splats": 0,
+      "support_gap_percentiles_world": {
+        "50": 0.0047430927716052285,
+        "90": 0.01826871376646958,
+        "95": 0.022079671378051946,
+        "99": 0.0256130989957487
+      },
+      "contact_margin_world": 0.030735718794898437,
+      "contact_margin_diagonals": 0.08203133895560283
+    }
+  },
+  "contact_margin_world": 0.030735718794898437,
+  "geometry_params": {
+    "frame_stride": 3,
+    "contact_points_per_frame": 400,
+    "seed_radius": 0.5,
+    "core_radius": 0.0,
+    "band": 0.2,
+    "step": 0.08,
+    "slope": 0.25,
+    "max_radius": 2.0,
+    "semantic_min_seed_fraction": 0.1,
+    "absorb_radius": 0.0,
+    "rescue_max_gap": 1.0,
+    "margin_percentile": 99.0,
+    "slam_run": "vggt_omega"
+  },
+  "inputs_stamp": {
+    "files": {
+      "transform": "f63245e5aefd791e8b198e2a678670ec2f55c3276faca34c086ceb57cdcd7515",
+      "understanding": "25bf8dd83c9ae84241f1462dc2386669be91a90706aa53073722f5319c9e7e61",
+      "panorama": "3daa720a4c71a58e491e139b455efc5e8f60c5fa417ea574455bc30ba5f90ec1",
+      "0/aligned": "98e201dbd3282f23bb42ed4ac5d73f4ca5a63445fbf70de075fe07cfc13396a5",
+      "0/adaptive_smoothed": "af9a9cbf516d91071d0f3862370a8132c3447c2bcde94b67ee1fe2805db5bd09",
+      "0/linear": "4080aec4160570fe33b4fc15f8b99e4aa6ef5d41d88035dfee16063198a7ed6f"
+    },
+    "big": {
+      "marble": {
+        "path": "3d/background/background_v1/lifting_marble/background.ply",
+        "size": 130560417
+      }
+    },
+    "params": {
+      "threshold": 0.3,
+      "environment": "auto",
+      "geometry": {
+        "frame_stride": 3,
+        "contact_points_per_frame": 400,
+        "seed_radius": 0.5,
+        "core_radius": 0.0,
+        "band": 0.2,
+        "step": 0.08,
+        "slope": 0.25,
+        "max_radius": 2.0,
+        "semantic_min_seed_fraction": 0.1,
+        "absorb_radius": 0.0,
+        "rescue_max_gap": 1.0,
+        "margin_percentile": 99.0,
+        "slam_run": "vggt_omega"
+      },
+      "object_ids": [
+        "0"
+      ]
+    }
+  },
+  "splats": {
+    "total": 1920000,
+    "sky": 0,
+    "support": 741938,
+    "occluders": 1178062
+  },
+  "outputs": {
+    "occluders": "3d/background/background_v1/lifting_marble/background_occluders.ply",
+    "support": "3d/background/background_v1/lifting_marble/background_support.ply"
+  },
+  "semantics": "sky = sky splats, outdoor scenes only (sort depth biased far back); support = the surface each object rests on (true depth; the viewer pulls the foreground toward the camera instead); occluders = every other Marble splat (true depth)"
+}
