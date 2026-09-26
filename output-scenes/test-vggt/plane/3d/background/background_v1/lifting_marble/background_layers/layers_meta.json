@@ -1,0 +1,109 @@
+{
+  "layout": "sky_support_occluders",
+  "source": "3d/background/background_v1/lifting_marble/background.ply",
+  "panorama": "3d/background/background_v1/outpainting/pano_outpainted.png",
+  "panorama_size_wh": [
+    2048,
+    1024
+  ],
+  "panorama_source_size_wh": [
+    2048,
+    1024
+  ],
+  "environment": "outdoor",
+  "environment_source": "understanding.json",
+  "prompts": {
+    "sky": [
+      "sky"
+    ],
+    "support": []
+  },
+  "support_surface_names": {
+    "0": "none"
+  },
+  "support_surface_source": "understanding.json",
+  "threshold": 0.3,
+  "per_label": {
+    "sky": {
+      "masks": 11,
+      "kept": 11,
+      "pixels": 1040047
+    }
+  },
+  "panorama_fraction": {
+    "sky": 0.49593305587768555,
+    "support_semantic": 0.0
+  },
+  "support_geometry_enabled": true,
+  "support_geometry": {
+    "0": {
+      "status": "unsupported",
+      "support_surface": "none"
+    }
+  },
+  "contact_margin_world": null,
+  "geometry_params": {
+    "frame_stride": 3,
+    "contact_points_per_frame": 400,
+    "seed_radius": 0.5,
+    "core_radius": 0.0,
+    "band": 0.2,
+    "step": 0.08,
+    "slope": 0.25,
+    "max_radius": 2.0,
+    "semantic_min_seed_fraction": 0.1,
+    "absorb_radius": 0.0,
+    "rescue_max_gap": 1.0,
+    "margin_percentile": 99.0,
+    "slam_run": "vggt_omega"
+  },
+  "inputs_stamp": {
+    "files": {
+      "transform": "109478ca72bd1a0517f80c8660de1cd2692c0ebada9d9a35a4688d5396455cca",
+      "understanding": "f9db0a3cd25d917394b6d5f51944460ddda43985bd468f1461d0008bcbf0335d",
+      "panorama": "0c4acb597feb6dde07ea416b46a999f56f8096bb4eccbb7366be1e60b0188643",
+      "0/aligned": "a3f7ff106fe58b7202f1b6289f1b7d9e1a7b42f88c5ef3bf2dcbd112c6d5427c",
+      "0/adaptive_smoothed": "1dc0ff1b46c17f676a5894fa3a19d736b73741acd5937c4af90bcba1cbbf377b",
+      "0/linear": "e006a39188af1a40cc636b5c5db0d85eac905f587d1ecf74f50f46d78bdd8cf7"
+    },
+    "big": {
+      "marble": {
+        "path": "3d/background/background_v1/lifting_marble/background.ply",
+        "size": 130560417
+      }
+    },
+    "params": {
+      "threshold": 0.3,
+      "environment": "auto",
+      "geometry": {
+        "frame_stride": 3,
+        "contact_points_per_frame": 400,
+        "seed_radius": 0.5,
+        "core_radius": 0.0,
+        "band": 0.2,
+        "step": 0.08,
+        "slope": 0.25,
+        "max_radius": 2.0,
+        "semantic_min_seed_fraction": 0.1,
+        "absorb_radius": 0.0,
+        "rescue_max_gap": 1.0,
+        "margin_percentile": 99.0,
+        "slam_run": "vggt_omega"
+      },
+      "object_ids": [
+        "0"
+      ]
+    }
+  },
+  "splats": {
+    "total": 1920000,
+    "sky": 955263,
+    "support": 0,
+    "occluders": 964737
+  },
+  "outputs": {
+    "occluders": "3d/background/background_v1/lifting_marble/background_occluders.ply",
+    "sky": "3d/background/background_v1/lifting_marble/background_sky.ply"
+  },
+  "semantics": "sky = sky splats, outdoor scenes only (sort depth biased far back); support = the surface each object rests on (true depth; the viewer pulls the foreground toward the camera instead); occluders = every other Marble splat (true depth)"
+}
