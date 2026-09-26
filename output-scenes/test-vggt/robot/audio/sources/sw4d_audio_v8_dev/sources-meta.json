@@ -19,8 +19,8 @@
     "ceiling": 0.92,
     "events": 523,
     "attenuated_events": 0,
-    "maximum_peak_before": 0.8584474325180054,
-    "maximum_peak_after": 0.8584474325180054,
+    "maximum_peak_before": 0.9109493494033813,
+    "maximum_peak_after": 0.9109493494033813,
     "nonfinite_events": 0
   },
   "camera_mix_bus_policy": "render_encode_peak_ceiling",
@@ -81,7 +81,7 @@
       "role": "dynamic",
       "peak_db": -5.0,
       "generation_prompt": "Robot footsteps on a hard floor.",
-      "separation_prompt": "footstep",
+      "separation_prompt": "robot footsteps",
       "dynamic_source_id": 1,
       "geometry_object_id": 0,
       "understanding_sound_index": 0,
@@ -156,7 +156,7 @@
       "role": "dynamic",
       "peak_db": -5.0,
       "generation_prompt": "Robot footsteps on a hard floor.",
-      "separation_prompt": "footstep",
+      "separation_prompt": "robot footsteps",
       "dynamic_source_id": 1,
       "geometry_object_id": 0,
       "understanding_sound_index": 0,
@@ -195,7 +195,7 @@
     "faint distant ventilation"
   ],
   "separation_text_prompts": [
-    "footstep",
+    "robot footsteps",
     "faint distant ventilation"
   ],
   "object_video_prompts": [
@@ -266,7 +266,7 @@
     "envelope_min_gain": 0.25,
     "envelope_max_gain": 4.0
   },
-  "experiment_signature": "290287672dac3e0fb33d2fedb1da368f1ba4c50ac83994e4b70a2ed51300701f",
+  "experiment_signature": "4c023e8284261478dc8d4b04827303b95fe3142eecab3fab61e763512de9d478",
   "experiment_settings": {
     "model_version": "v8_dev",
     "video_timing": {
@@ -373,7 +373,7 @@
     "hy_foley_config_path": "4d/backbones/HunyuanVideo-Foley/configs/hunyuanvideo-foley-xxl.yaml",
     "sam_audio_model_name": "facebook/sam-audio-small",
     "inputs": {
-      "understanding/gpt5_v8_dev_v4/video/understanding.json": "acbfdc9f9ebcaad4041175bd347383bb376647e2aa50d3ee602f50e68a3242e3",
+      "understanding/gpt5_v8_dev_v3/video/understanding.json": "3f08a1119320186be66ee7f65e762af22c6a5e52d226f135176a90cb495d9c01",
       "input/video.mp4": {
         "size": 2506056,
         "mtime_ns": 1790027354334133557

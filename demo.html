@@ -775,8 +775,29 @@
     }
     // onProgress({ loadedRows, rows, shape }) is called while the body streams in, with
     // the leading dimension of the array as the unit (frames of a per-frame array)
+    // Hugging Face limits anonymous downloads (3000 per 5 min per IP; one
+    // 200-frame human was ~400 files), so a 429, a 5xx or a dropped connection
+    // is retried with backoff instead of failing the whole deformation.
+    async function fetchRetry(url, init = {}, attempts = 6) {
+      for (let attempt = 0; ; attempt++) {
+        let response = null, error = null;
+        try { response = await fetch(url, init); } catch (e) { error = e; }
+        if (response && (response.ok || (response.status < 500 && response.status !== 429))) return response;
+        if (attempt >= attempts - 1) {
+          if (response) return response;
+          throw error;
+        }
+        const retryAfter = Number(response?.headers.get('retry-after'));
+        const delay = Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1000
+          : Math.min(20000, 1000 * 2 ** attempt);
+        console.warn(`[fetch] ${response ? `HTTP ${response.status}` : error} for ${url}; retry ${attempt + 1}/${attempts - 1} in ${Math.round(delay / 1000)} s`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
     async function loadNpy(url, onProgress = null) {
-      const response = await fetch(url, { cache: 'no-store' });
+      const response = await fetchRetry(url, { cache: 'no-store' });
       if (!response.ok) throw new Error(`NumPy array not found at ${url}`);
       let buffer;
       if (onProgress && response.body) {
@@ -845,33 +866,43 @@
       return { data, shape, url };
     }
 
-    // deformed_xyz.npy split into one file per row (<dir>/00000.npy, ...), for
-    // static hosts with a per-file size limit (GitHub Pages: 100 MB). The row
-    // count comes from frame_ids.npy; the result matches loadNpy's.
+    // A (frames, ...) array split by row range: <dir>/<first row, 5 digits>.npy
+    // holds rows [first, first + k) as a (k, ...) array, or a single row as
+    // (...). Keeps files under static hosts' size limits and the request count
+    // down (scripts/web_demo_export.py split-frames). The row count comes from
+    // frame_ids.npy; the result matches loadNpy's.
     async function loadPerFrameNpy(dir, idsUrl, onProgress = null) {
       const rows = (await loadNpy(idsUrl)).data.length;
-      const urls = Array.from({ length: rows }, (_, r) => `${dir}/${String(r).padStart(5, '0')}.npy`);
-      const first = await loadNpy(urls[0]);
-      if (!(first.data instanceof Float32Array)) throw new Error(`${urls[0]}: expected float32`);
-      const rowSize = first.data.length;
+      const name = row => `${dir}/${String(row).padStart(5, '0')}.npy`;
+      const first = await loadNpy(name(0));
+      if (!(first.data instanceof Float32Array)) throw new Error(`${name(0)}: expected float32`);
+      const chunk = first.shape.length === 3 ? first.shape[0] : 1;   // rows per file
+      const rowShape = chunk === 1 && first.shape.length === 2 ? first.shape : first.shape.slice(1);
+      const rowSize = rowShape.reduce((a, b) => a * b, 1);
       const data = new Float32Array(rows * rowSize);
-      data.set(first.data, 0);
-      let loadedRows = 1;
-      onProgress?.({ loadedRows, rows });
-      let next = 1;
+      let loadedRows = 0;
+      const put = (part, row) => {
+        const k = part.shape.length === 3 ? part.shape[0] : 1;
+        if (part.data.length !== k * rowSize || !(part.data instanceof Float32Array)) {
+          throw new Error(`${name(row)}: shape ${part.shape.join('×')} does not match ${first.shape.join('×')}`);
+        }
+        const keep = Math.min(k, rows - row);
+        data.set(part.data.subarray(0, keep * rowSize), row * rowSize);
+        loadedRows += keep;
+        onProgress?.({ loadedRows, rows });
+      };
+      put(first, 0);
+      const starts = [];
+      for (let r = chunk; r < rows; r += chunk) starts.push(r);
+      let next = 0;
       const worker = async () => {
-        while (next < rows) {
-          const r = next++;
-          const frame = await loadNpy(urls[r]);
-          if (frame.data.length !== rowSize || !(frame.data instanceof Float32Array)) {
-            throw new Error(`${urls[r]}: shape ${frame.shape.join('×')} does not match ${first.shape.join('×')}`);
-          }
-          data.set(frame.data, r * rowSize);
-          onProgress?.({ loadedRows: ++loadedRows, rows });
+        while (next < starts.length) {
+          const r = starts[next++];
+          put(await loadNpy(name(r)), r);
         }
       };
-      await Promise.all(Array.from({ length: 6 }, worker));
-      return { data, shape: [rows, ...first.shape], url: dir };
+      await Promise.all(Array.from({ length: Math.min(6, Math.max(1, starts.length)) }, worker));
+      return { data, shape: [rows, ...rowShape], url: dir };
     }
 
     // A deformation array is either <root>/<name>.npy or split per frame under
@@ -1012,7 +1043,7 @@
     // to the next one instead of surfacing as a load error.
     async function splatUrlExists(url) {
       try {
-        const response = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+        const response = await fetchRetry(url, { method: 'HEAD', cache: 'no-store' });
         return response.ok;
       } catch (_) { return false; }
     }
@@ -1059,8 +1090,15 @@
 
     // Spark renders every SplatMesh in `scene` in one globally depth-sorted pass
     // (GPU sort), foreground objects and background layers together.
-    const spark = new SparkRenderer({ renderer });
+    const spark = new SparkRenderer({ renderer, enableLod: false });
     scene.add(spark);
+    // A deformed frame is shown only once its depth sort has finished (see
+    // applyFgDeformationFor), so the sort round trip sets the motion update
+    // rate. Submit the depth pass to the GPU at once instead of with the next
+    // frame's flush, and drop Spark's 1 ms pause before the readback.
+    spark.readPause = 0;
+    spark.flushAfterGenerate = true;
+    spark.flushAfterRead = true;
     // Three splat groups, each its own scene + SparkRenderer (GPU-sorted by true depth
     // inside the group): the sky + support surface, the occluders, and the foreground.
     // They are composited per pixel by depth (see renderCurrentView), which is how
@@ -3186,6 +3224,10 @@
         try {
           xyz = await loadDeformArray(root, 'deformed_xyz', `${candidate}/frame_ids.npy`, progress('deformation'));
         } catch (e) {
+          // Not silently rigid: a remote (Hugging Face) fetch that fails after
+          // retries leaves the canonical cloud on screen, which for an LHM++
+          // export is pelvis-relative and looks upside down and frozen.
+          console.error(`[deform] object ${objectId}: loading ${root}/deformed_xyz failed; the cloud stays rigid`, e);
           xyz = null;   // try the next non-rigid source
         }
         if (xyz) {
@@ -3264,6 +3306,11 @@
     // and flagging the array for re-upload; Spark re-sorts on the GPU every frame.
     function applyFgDeformation(frameIdx) {
       let any = false;
+      // Without the CPU sort below, Spark ignores a mapping change while its
+      // sort is in flight, so writing the next frame's 160k splats now would
+      // only burn CPU; the frame that is current when the sort finishes gets
+      // written instead.
+      if (!cpuSort.active && (spark.sorting || spark.sortDirty)) return false;
       for (const record of loadedForegroundObjects()) {
         if (!record.deform) continue;
         try {
@@ -3275,6 +3322,123 @@
       }
       return any;
     }
+    // ── Synchronous CPU depth sort for a deforming foreground ─────────────
+    // Spark sorts asynchronously (GPU depth readback, then a worker) and shows
+    // an edited cloud before that sort lands, so a deforming human draws with
+    // the previous frame's order (arm behind torso); holding each frame until
+    // its sort lands (updateMappingVersion) instead caps the motion at a third
+    // of the frame rate. When the main scene holds exactly one deforming mesh,
+    // its order is computed here from the centres just written, in the same
+    // tick, and put straight into Spark's ordering texture (splat index per
+    // instance, 4 per RGBA32UI texel); Spark's own sort for that renderer is
+    // switched off meanwhile. Direction (far-to-near under "over" blending) is
+    // read off Spark's first sort rather than assumed.
+    const cpuSort = {
+      active: false, farFirst: null, driveSort: null,
+      dist: null, keys: null, order: null, counts: new Uint32Array(65537),
+      lastCam: new THREE.Vector3(), lastCenters: null, lastCount: 0, range: 0,
+    };
+    const _csCam = new THREE.Vector3(), _csInv = new THREE.Matrix4();
+    function cpuSortCandidate() {
+      if (!fgDeformEnabled) return null;
+      const meshes = scene.children.filter(object => object instanceof SplatMesh);
+      if (meshes.length !== 1) return null;
+      return loadedForegroundObjects().find(record => record.mesh === meshes[0] && record.deform) || null;
+    }
+    function cpuSortStop() {
+      if (!cpuSort.active) return;
+      spark.driveSort = cpuSort.driveSort;
+      cpuSort.active = false;
+      cpuSort.farFirst = null;
+      cpuSort.lastCenters = null;
+      spark.sortDirty = true;   // hand the current order back to Spark
+    }
+    function cpuSortFrame() {
+      const record = cpuSortCandidate();
+      const centers = record?.deformCurrentCenters;
+      const count = record?.mesh?.packedSplats?.numSplats || 0;
+      if (!centers || !count || centers.length < count * 3) { cpuSortStop(); return; }
+      const tex = spark.orderingTexture;
+      if (!cpuSort.active) {
+        // Take over only once Spark has sorted this cloud itself and shows the
+        // accumulator it last generated: the texture then exists (sized for
+        // it), its order shows the draw direction, and no display switch is
+        // pending.
+        if (!tex || spark.sorting || spark.display !== spark.current
+            || spark.activeSplats < 2 || tex.image.data.length < count) return;
+        cpuSort.driveSort = spark.driveSort;
+        spark.driveSort = async () => {
+          spark.sortDirty = false;
+          // The tail of Spark's own driveSort: after a mapping change it keeps
+          // the previous accumulator on screen until the sort lands, so the
+          // hand-over must still happen here or the display freezes.
+          if (spark.display !== spark.current) {
+            spark.accumulators.push(spark.display);
+            spark.display = spark.current;
+          }
+        };
+        cpuSort.active = true;
+        cpuSort.lastCenters = null;
+      }
+      const mesh = record.mesh;
+      mesh.updateMatrixWorld(true);
+      camera.updateMatrixWorld();
+      camera.getWorldPosition(_csCam).applyMatrix4(_csInv.copy(mesh.matrixWorld).invert());
+      const moved = _csCam.distanceTo(cpuSort.lastCam) > 1e-3 * cpuSort.range;
+      if (!moved && cpuSort.lastCenters === centers && cpuSort.lastCount === count) return;
+      cpuSort.lastCam.copy(_csCam);
+      cpuSort.lastCenters = centers;
+      cpuSort.lastCount = count;
+
+      if (!cpuSort.dist || cpuSort.dist.length < count) {
+        cpuSort.dist = new Float32Array(count);
+        cpuSort.keys = new Uint16Array(count);
+        cpuSort.order = new Uint32Array(count);
+      }
+      const dist = cpuSort.dist, keys = cpuSort.keys, order = cpuSort.order, counts = cpuSort.counts;
+      const cx = _csCam.x, cy = _csCam.y, cz = _csCam.z;
+      let dmin = Infinity, dmax = -Infinity;
+      for (let i = 0; i < count; i++) {
+        const dx = centers[i * 3] - cx, dy = centers[i * 3 + 1] - cy, dz = centers[i * 3 + 2] - cz;
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        dist[i] = d;
+        if (d < dmin) dmin = d;
+        if (d > dmax) dmax = d;
+      }
+      cpuSort.range = Math.max(dmax - dmin, 1e-9);
+      // 16-bit counting sort over the cloud's own depth range (sub-millimetre
+      // bins for a person): near-linear, no allocation.
+      const scale = 65535 / cpuSort.range;
+      counts.fill(0);
+      for (let i = 0; i < count; i++) {
+        const k = ((dist[i] - dmin) * scale) | 0;
+        keys[i] = k;
+        counts[k + 1]++;
+      }
+      for (let k = 0; k < 65536; k++) counts[k + 1] += counts[k];
+      for (let i = 0; i < count; i++) order[counts[keys[i]]++] = i;   // ascending distance
+
+      const data = tex.image.data;
+      if (cpuSort.farFirst === null) {
+        // Spark's last order: whichever end is farther is the end it draws first.
+        let head = 0, tail = 0, n = 0;
+        const active = Math.min(spark.activeSplats, data.length);
+        for (let j = 0; j < 256 && j < active; j++) {
+          const a = data[j], b = data[active - 1 - j];
+          if (a < count && b < count) { head += dist[a]; tail += dist[b]; n++; }
+        }
+        cpuSort.farFirst = n === 0 || head >= tail;
+        console.info(`[cpu-sort] taking over the foreground depth order (${count} splats, ${cpuSort.farFirst ? 'far-to-near' : 'near-to-far'})`);
+      }
+      if (cpuSort.farFirst) {
+        for (let i = 0, j = count - 1; i < count; i++, j--) data[i] = order[j];
+      } else {
+        data.set(order.subarray(0, count));
+      }
+      spark.activeSplats = count;
+      tex.needsUpdate = true;
+    }
+
     const _dq = new THREE.Quaternion(), _dqc = new THREE.Quaternion(), _dqs = new THREE.Quaternion();
     function checkDeformationOrder(record, canonicalCenters) {
       // deformed_xyz.npy is indexed by splat: its canonical row must reproduce the
@@ -3362,7 +3526,15 @@
           enc);
       }
       packed.needsUpdate = true;
-      if (typeof mesh.updateVersion === 'function') mesh.updateVersion();
+      record.deformCurrentCenters = src;
+      // With the CPU sort below in charge, the new frame's order is written in
+      // this same tick, so the edit can show at once (updateVersion). Otherwise
+      // bump the *mapping* version: Spark shows a version-only edit immediately
+      // with the previous frame's depth order (its worker sort lands a few
+      // frames later, so a moving arm draws behind the torso), while a mapping
+      // change keeps the old frame on screen until the new one is sorted.
+      if (!cpuSort.active && typeof mesh.updateMappingVersion === 'function') mesh.updateMappingVersion();
+      else if (typeof mesh.updateVersion === 'function') mesh.updateVersion();
       return true;
     }
 
@@ -3539,6 +3711,7 @@
     }
     const compositePrevClearColor = new THREE.Color();
     function renderCurrentView() {
+      cpuSortFrame();   // every render path, including the scripted renderAt()
       const w = renderer.domElement.width, h = renderer.domElement.height;
       const targets = ensureCompositeTargets(w, h);
       renderer.getClearColor(compositePrevClearColor);
@@ -3879,8 +4052,26 @@
         ]).filter(value => value > 0);
         const visualFrameCounts = [transformFrames, ...cameraFrameCounts].filter(value => value > 0);
         numFrames = Math.max(1, Math.min(...visualFrameCounts));
-        const slamTargetFps = Number(primaryCamera.slamMeta?.target_fps);
-        videoFps = Number.isFinite(slamTargetFps) && slamTargetFps > 0 ? slamTargetFps : 30;
+        // Audio metadata is needed here already: the source video's frame
+        // rate is recorded there (sources-meta video_timing, geometry-meta
+        // fps), and the SLAM run only records a rate when it resampled.
+        const [sourceMetaResult, loadedDynamicGeometry, loadedStaticGeometry] = await Promise.all([
+          fetchFirstOptionalJson([
+            `${basePath}/audio/sources/sw4d_audio_v8_dev/sources-meta.json`,
+            `${basePath}/audio/sources/sw4d_audio_v8/sources-meta.json`,
+          ]),
+          fetchOptionalJson(`${basePath}/audio/geometry/dyn_amb/geometry-meta.json`, null),
+          fetchOptionalJson(`${basePath}/audio/geometry/static_grounding/geometry-meta.json`, null),
+        ]);
+        audioSourcesMeta = sourceMetaResult?.data || null;
+        geoMeta = loadedDynamicGeometry;
+        staticGeoMeta = loadedStaticGeometry;
+        const fpsCandidates = [
+          primaryCamera.slamMeta?.target_fps,
+          audioSourcesMeta?.video_timing?.fps,
+          geoMeta?.fps,
+        ].map(Number);
+        videoFps = fpsCandidates.find(fps => Number.isFinite(fps) && fps > 0) || 30;
         duration = numFrames / videoFps;
         infoVideoFpsEl.textContent = videoFps.toFixed(2);
         infoNumFramesEl.textContent = numFrames;
@@ -3890,19 +4081,8 @@
         // ── 2. Load v8 source plan, all source geometry, and final mix ─────
         setLoading(true, 'Loading audio sources...');
         try {
-          const [sourceMetaResult, loadedDynamicGeometry, loadedStaticGeometry] = await Promise.all([
-            fetchFirstOptionalJson([
-              `${basePath}/audio/sources/sw4d_audio_v8_dev/sources-meta.json`,
-              `${basePath}/audio/sources/sw4d_audio_v8/sources-meta.json`,
-            ]),
-            fetchOptionalJson(`${basePath}/audio/geometry/dyn_amb/geometry-meta.json`, null),
-            fetchOptionalJson(`${basePath}/audio/geometry/static_grounding/geometry-meta.json`, null),
-          ]);
-          audioSourcesMeta = sourceMetaResult?.data || null;
           audioWorldScale = metadataAudioScale(audioSourcesMeta);
           console.info(`Audio world scale: ${audioWorldScale}x (${audioSourcesMeta?.audio_world_scale ? 'metadata' : 'no metadata record'})`);
-          geoMeta = loadedDynamicGeometry;
-          staticGeoMeta = loadedStaticGeometry;
 
           initAudioCtx();
           const spatialTrackCount = await loadSpatialAudioTracks(basePath);
