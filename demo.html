@@ -3334,7 +3334,7 @@
     // switched off meanwhile. Direction (far-to-near under "over" blending) is
     // read off Spark's first sort rather than assumed.
     const cpuSort = {
-      active: false, farFirst: null, driveSort: null,
+      active: false, driveSort: null,
       dist: null, keys: null, order: null, counts: new Uint32Array(65537),
       lastCam: new THREE.Vector3(), lastCenters: null, lastCount: 0, range: 0,
     };
@@ -3349,9 +3349,12 @@
       if (!cpuSort.active) return;
       spark.driveSort = cpuSort.driveSort;
       cpuSort.active = false;
-      cpuSort.farFirst = null;
       cpuSort.lastCenters = null;
-      spark.sortDirty = true;   // hand the current order back to Spark
+      // Hand the order back to Spark. Until its sort lands, the texture holds
+      // indices for the cloud we sorted, which a reloaded scene no longer has,
+      // so draw nothing rather than garbage for those frames.
+      spark.activeSplats = 0;
+      spark.sortDirty = true;
     }
     function cpuSortFrame() {
       const record = cpuSortCandidate();
@@ -3379,6 +3382,7 @@
         };
         cpuSort.active = true;
         cpuSort.lastCenters = null;
+        console.info(`[cpu-sort] taking over the foreground depth order (${count} splats)`);
       }
       const mesh = record.mesh;
       mesh.updateMatrixWorld(true);
@@ -3418,23 +3422,12 @@
       for (let k = 0; k < 65536; k++) counts[k + 1] += counts[k];
       for (let i = 0; i < count; i++) order[counts[keys[i]]++] = i;   // ascending distance
 
+      // Far-to-near: Spark's splat material is NormalBlending with
+      // premultiplied alpha ("over"), which needs painter's order. (Reading the
+      // direction off Spark's previous order was unreliable: after a scene
+      // reload that texture still holds indices of the old cloud.)
       const data = tex.image.data;
-      if (cpuSort.farFirst === null) {
-        // Spark's last order: whichever end is farther is the end it draws first.
-        let head = 0, tail = 0, n = 0;
-        const active = Math.min(spark.activeSplats, data.length);
-        for (let j = 0; j < 256 && j < active; j++) {
-          const a = data[j], b = data[active - 1 - j];
-          if (a < count && b < count) { head += dist[a]; tail += dist[b]; n++; }
-        }
-        cpuSort.farFirst = n === 0 || head >= tail;
-        console.info(`[cpu-sort] taking over the foreground depth order (${count} splats, ${cpuSort.farFirst ? 'far-to-near' : 'near-to-far'})`);
-      }
-      if (cpuSort.farFirst) {
-        for (let i = 0, j = count - 1; i < count; i++, j--) data[i] = order[j];
-      } else {
-        data.set(order.subarray(0, count));
-      }
+      for (let i = 0, j = count - 1; i < count; i++, j--) data[i] = order[j];
       spark.activeSplats = count;
       tex.needsUpdate = true;
     }
