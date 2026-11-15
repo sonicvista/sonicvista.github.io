@@ -1,0 +1,7 @@
+*.mp4 -text
+*.webm -text
+*.wav -text
+*.ply -text
+*.npy -text
+*.png -text
+*.jpg -text
