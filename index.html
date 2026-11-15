@@ -235,6 +235,14 @@
         }
         
         #abstract p { text-align: justify; }
+        /* links in body text: the page's teal accent, underlined only on hover */
+        .caption-center a, .caption-left a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(46,196,182,0.35);
+            transition: border-color 0.2s ease, color 0.2s ease;
+        }
+        .caption-center a:hover, .caption-left a:hover { color: #5fe0d4; border-bottom-color: currentColor; }
         .text-center { text-align: center; }
         .caption-center { text-align: center; }
 
@@ -1020,18 +1028,6 @@
             .result-pair:hover .result-label { opacity: 1; }
             .result-pair:hover .gui-scene-play-icon { opacity: 0; }
         }
-        /* waiting for the row's videos to load: the play icon turns into a spinner */
-        @keyframes result-loading-spin {
-            from { transform: translate(-50%, -50%) rotate(0deg); }
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        .result-pair.is-loading .gui-scene-play-icon {
-            opacity: 0.9;
-            border-color: rgba(255,255,255,0.25);
-            border-top-color: #fff;
-            animation: result-loading-spin 0.9s linear infinite;
-        }
-        .result-pair.is-loading .gui-scene-play-icon::after { display: none; }
         .hint-tap { display: none; }
         @media (hover: none) {
             .hint-hover { display: none; }
@@ -1158,8 +1154,13 @@
         .results-subtitle:first-of-type { margin-top: 20px; }
         /* two square inputs + one 16:9 ours, widths proportional to aspect ratios (9:9:16) */
         .result-pair-multi { grid-template-columns: 9fr 9fr 16fr; }
+        /* three videos side by side; --c1..--c3 are the aspect ratios, so the cells share one height */
+        .result-pair-three { grid-template-columns: var(--c1, 1fr) var(--c2, 1fr) var(--c3, 1fr); }
+        .result-pair-four { grid-template-columns: var(--c1, 1fr) var(--c2, 1fr) var(--c3, 1fr) var(--c4, 1fr); }
         @media (max-width: 520px) {
             .result-pair { grid-template-columns: 1fr; }
+            .result-pair-three { grid-template-columns: 1fr; }
+            .result-pair-four { grid-template-columns: 1fr 1fr; }
             .result-pair-multi { grid-template-columns: 1fr 1fr; }
             .result-pair-multi .result-cell-ours { grid-column: 1 / -1; }
         }
@@ -1184,6 +1185,7 @@
     <div class="_content_l9x19_124">
         <nav class="_links_l9x19_177">
             <ul>
+                <li><a href="#rebuttal">Rebuttal</a></li>
                 <li><a href="#results">Results</a></li>
                 <li class="nav-demo"><a href="demo.html">Interactive Demo</a></li>
                 <li class="nav-sound">
@@ -1231,6 +1233,80 @@
                 <p><i>
                     <span style="color: #2EC4B6;"><b>TL;DR:</b></span> SonicVista turns a single video into an explorable 4D audio-visual scene, using dual-space audio diffusion synchronization to generate physically grounded spatial audio for static and moving sources, enabling real-time novel-view audio-visual rendering.
                 </i></p>
+
+            </div>
+        </section>
+
+        <section id="rebuttal">
+            <div class="container" style="padding: 0;">
+                <h2>Rebuttal</h2>
+                <hr>
+            </div>
+            <p class="caption-center" style="margin-top: 10px; font-style: italic;">New qualitative experiments added for the rebuttal.</p>
+
+            <h3 class="results-subtitle">Foreground&ndash;background harmonization</h3>
+            <p class="caption-center" style="margin-top: 10px; font-style: italic; text-wrap: balance;">We apply <a href="https://research.nvidia.com/labs/toronto-ai/DiffusionRenderer/" target="_blank" rel="noopener noreferrer">DiffusionRenderer</a> (Cosmos) to our renderings as an offline relighting step: its inverse renderer predicts G-buffers of the composited clip, and its forward renderer relights the clip under an environment map rendered from our reconstructed background. <span class="hint-hover">Hover over a row to play its videos together.</span><span class="hint-tap">Tap a row to play its videos together.</span> From left to right: input video(s), ours without harmonization, ours with harmonization. Visual comparison only; these clips have no audio.</p>
+            <!-- Rebuttal: one .result-pair-three per scene (input / ours / ours + harmonization), same hover-to-play and sync as Results. -->
+            <div class="results-list" id="results-list-harmonization">
+
+                <div class="result-pair result-pair-three" data-scene="harmonization-porsche_4" style="--c1: 1920fr; --c2: 1964fr; --c3: 1964fr;">
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/porsche_4/input.jpg"><source src="assets/rebuttal/harmonization/porsche_4/input.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Input video</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/porsche_4/ours.jpg"><source src="assets/rebuttal/harmonization/porsche_4/ours.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Ours w/o harmonization</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/porsche_4/ours-harmonized.jpg"><source src="assets/rebuttal/harmonization/porsche_4/ours-harmonized.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Ours w/ harmonization</span>
+                    </div>
+                </div>
+
+                <div class="result-pair result-pair-three" data-scene="harmonization-plane_4" style="--c1: 1920fr; --c2: 1964fr; --c3: 1964fr;">
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/plane_4/input.jpg"><source src="assets/rebuttal/harmonization/plane_4/input.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Input video</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/plane_4/ours.jpg"><source src="assets/rebuttal/harmonization/plane_4/ours.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Ours w/o harmonization</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/plane_4/ours-harmonized.jpg"><source src="assets/rebuttal/harmonization/plane_4/ours-harmonized.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Ours w/ harmonization</span>
+                    </div>
+                </div>
+
+                <div class="result-pair result-pair-four" data-scene="harmonization-car-6" style="--c1: 1080fr; --c2: 1080fr; --c3: 1964fr; --c4: 1964fr;">
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/car-6/input-1.jpg"><source src="assets/rebuttal/harmonization/car-6/input-1.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Input (red car)</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/car-6/input-2.jpg"><source src="assets/rebuttal/harmonization/car-6/input-2.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Input (white car)</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/car-6/ours.jpg"><source src="assets/rebuttal/harmonization/car-6/ours.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Ours w/o harmonization</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell" data-has-audio="0">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/harmonization/car-6/ours-harmonized.jpg"><source src="assets/rebuttal/harmonization/car-6/ours-harmonized.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Ours w/ harmonization</span>
+                    </div>
+                </div>
 
             </div>
         </section>
@@ -1442,12 +1518,12 @@
                 <p class="ablation-scene-name">Plane</p>
                 <div class="result-pair" data-scene="abl-plane">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/plane/input.jpg"><source src="assets/results/plane/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/plane/input.jpg"><source src="assets/results/plane/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/plane/ours.jpg"><source src="assets/results/plane/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/plane/ours.jpg"><source src="assets/results/plane/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1464,12 +1540,12 @@
                 <p class="ablation-scene-name">Tap dance</p>
                 <div class="result-pair" data-scene="abl-tap-dance">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/input.jpg"><source src="assets/results/tap-dance/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/tap-dance/input.jpg"><source src="assets/results/tap-dance/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/ours.jpg"><source src="assets/results/tap-dance/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/tap-dance/ours.jpg"><source src="assets/results/tap-dance/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1486,18 +1562,18 @@
                 <div class="result-pair" data-scene="abl-human-26">
                     <div class="result-input-duo">
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/human-26/input-1.jpg"><source src="assets/results/human-26/input-1.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/human-26/input-1.jpg"><source src="assets/results/human-26/input-1.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (person 1)</span>
                         </div>
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/human-26/input-2.jpg"><source src="assets/results/human-26/input-2.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/human-26/input-2.jpg"><source src="assets/results/human-26/input-2.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (person 2)</span>
                         </div>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/human-26/ours.jpg"><source src="assets/results/human-26/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/human-26/ours.jpg"><source src="assets/results/human-26/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1521,12 +1597,12 @@
                 <p class="ablation-scene-name">Porsche</p>
                 <div class="result-pair" data-scene="tracks-porsche_4">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/porsche_4/input.jpg"><source src="assets/results/porsche_4/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/porsche_4/input.jpg"><source src="assets/results/porsche_4/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/porsche_4/ours.jpg"><source src="assets/results/porsche_4/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/porsche_4/ours.jpg"><source src="assets/results/porsche_4/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Overall</span>
@@ -1543,12 +1619,12 @@
                 <p class="ablation-scene-name">Tap dance</p>
                 <div class="result-pair" data-scene="tracks-tap-dance">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/input.jpg"><source src="assets/results/tap-dance/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/tap-dance/input.jpg"><source src="assets/results/tap-dance/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/ours.jpg"><source src="assets/results/tap-dance/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/tap-dance/ours.jpg"><source src="assets/results/tap-dance/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Overall</span>
@@ -1564,18 +1640,18 @@
                 <div class="result-pair" data-scene="tracks-car-6">
                     <div class="result-input-duo">
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/car-6/input-1.jpg"><source src="assets/results/car-6/input-1.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/car-6/input-1.jpg"><source src="assets/results/car-6/input-1.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (red car)</span>
                         </div>
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/car-6/input-2.jpg"><source src="assets/results/car-6/input-2.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/car-6/input-2.jpg"><source src="assets/results/car-6/input-2.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (white car)</span>
                         </div>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/car-6/ours.jpg"><source src="assets/results/car-6/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/car-6/ours.jpg"><source src="assets/results/car-6/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Overall</span>
@@ -1600,12 +1676,12 @@
                 <p class="ablation-scene-name">Porsche</p>
                 <div class="result-pair" data-scene="baseline-porsche_4">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/porsche_4/input.jpg"><source src="assets/results/porsche_4/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/porsche_4/input.jpg"><source src="assets/results/porsche_4/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/porsche_4/ours.jpg"><source src="assets/results/porsche_4/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/porsche_4/ours.jpg"><source src="assets/results/porsche_4/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1621,12 +1697,12 @@
                 <p class="ablation-scene-name">Plane</p>
                 <div class="result-pair" data-scene="baseline-plane">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/plane/input.jpg"><source src="assets/results/plane/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/plane/input.jpg"><source src="assets/results/plane/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/plane/ours.jpg"><source src="assets/results/plane/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/plane/ours.jpg"><source src="assets/results/plane/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1642,12 +1718,12 @@
                 <p class="ablation-scene-name">Tap dance</p>
                 <div class="result-pair" data-scene="baseline-tap-dance">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/input.jpg"><source src="assets/results/tap-dance/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/tap-dance/input.jpg"><source src="assets/results/tap-dance/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/ours.jpg"><source src="assets/results/tap-dance/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/tap-dance/ours.jpg"><source src="assets/results/tap-dance/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1663,12 +1739,12 @@
                 <p class="ablation-scene-name">Robot</p>
                 <div class="result-pair" data-scene="baseline-robot_12">
                     <div class="gui-scene-cell result-cell" data-has-audio="1">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/robot_12/input.jpg"><source src="assets/results/robot_12/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/robot_12/input.jpg"><source src="assets/results/robot_12/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/robot_12/ours.jpg"><source src="assets/results/robot_12/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/robot_12/ours.jpg"><source src="assets/results/robot_12/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1684,12 +1760,12 @@
                 <p class="ablation-scene-name">Horse riding</p>
                 <div class="result-pair" data-scene="baseline-horse-riding">
                     <div class="gui-scene-cell result-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/horse-riding/input.jpg"><source src="assets/results/horse-riding/input.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/horse-riding/input.jpg"><source src="assets/results/horse-riding/input.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-label">Input video</span>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/horse-riding/ours.jpg"><source src="assets/results/horse-riding/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/horse-riding/ours.jpg"><source src="assets/results/horse-riding/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1706,18 +1782,18 @@
                 <div class="result-pair" data-scene="baseline-car-6">
                     <div class="result-input-duo">
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/car-6/input-1.jpg"><source src="assets/results/car-6/input-1.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/car-6/input-1.jpg"><source src="assets/results/car-6/input-1.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (red car)</span>
                         </div>
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/car-6/input-2.jpg"><source src="assets/results/car-6/input-2.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/car-6/input-2.jpg"><source src="assets/results/car-6/input-2.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (white car)</span>
                         </div>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/car-6/ours.jpg"><source src="assets/results/car-6/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/car-6/ours.jpg"><source src="assets/results/car-6/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -1734,18 +1810,18 @@
                 <div class="result-pair" data-scene="baseline-human-26">
                     <div class="result-input-duo">
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/human-26/input-1.jpg"><source src="assets/results/human-26/input-1.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/human-26/input-1.jpg"><source src="assets/results/human-26/input-1.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (person 1)</span>
                         </div>
                         <div class="gui-scene-cell result-cell">
-                            <video muted playsinline preload="metadata" loop poster="assets/results/human-26/input-2.jpg"><source src="assets/results/human-26/input-2.mp4" type="video/mp4"></video>
+                            <video muted playsinline preload="none" loop poster="assets/results/human-26/input-2.jpg"><source src="assets/results/human-26/input-2.mp4" type="video/mp4"></video>
                             <div class="gui-scene-play-icon"></div>
                             <span class="result-label">Input (person 2)</span>
                         </div>
                     </div>
                     <div class="gui-scene-cell result-cell result-cell-ours track-cell">
-                        <video muted playsinline preload="metadata" loop poster="assets/results/human-26/ours.jpg"><source src="assets/results/human-26/ours.mp4" type="video/mp4"></video>
+                        <video muted playsinline preload="none" loop poster="assets/results/human-26/ours.jpg"><source src="assets/results/human-26/ours.mp4" type="video/mp4"></video>
                         <div class="gui-scene-play-icon"></div>
                         <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
                         <span class="result-label track-label">Ours</span>
@@ -2410,11 +2486,13 @@
     if (document.readyState === 'complete' || document.readyState === 'interactive') setupSoundToggle();
     else window.addEventListener('DOMContentLoaded', setupSoundToggle);
 
-    // Results rows: hovering a pair plays input + ours in sync. With the sound switch
-    // on, the sound follows the pointer: the hovered cell is audible when its video has
-    // an audio track (every "ours" cell; an input cell only when its file carries audio),
-    // otherwise the row's first "ours" cell. Touch: tapping a cell with audio moves the
-    // sound to it. data-has-audio="1"/"0" on a cell overrides the detection.
+    // Results rows: hovering a pair plays all of its videos, started together from the
+    // beginning; each then loops on its own (they are cut to one length, so they stay close,
+    // and nothing re-aligns them). With the sound switch on, the sound follows the pointer:
+    // the hovered cell is audible when its video has an audio track (every "ours" cell; an
+    // input cell only when its file carries audio), otherwise the row's first "ours" cell.
+    // Touch: tapping a cell with audio moves the sound to it. data-has-audio="1"/"0" on a
+    // cell overrides the detection.
     function cellHasAudio(cell) {
         const flag = cell.getAttribute('data-has-audio');
         if (flag === '1') return true;
@@ -2431,147 +2509,12 @@
         const template = document.querySelector('.result-cell-ours .result-audio-badge');
         if (template) cell.insertBefore(template.cloneNode(true), cell.querySelector('.result-label'));
     }
-    // Keeps the videos of one results row on a single clock, however many times the row
-    // loops, and never lets one of them play while another is still loading.
-    //  - Nothing plays until every video of the row is ready (enough data to play
-    //    through). The row starts, and restarts each loop, from a paused state in which
-    //    all videos are at the same position; a video that runs out of data mid-way puts
-    //    the whole row back into that state until it has loaded.
-    //  - Native looping is off: each video restarting on its own is what lets them drift
-    //    apart, a little more every pass. All of them restart together when the reference
-    //    (the audible video, from getReference) reaches the end of the shortest one.
-    //  - While playing, the reference is left alone so its sound never glitches; the
-    //    others are muted and get a small playback-rate nudge onto it. Seeks only happen
-    //    while the row is paused, so their duration never turns into new drift.
-    // onLoading(true/false) reports a wait long enough to be worth showing.
-    function createRowSync(videos, getReference, onLoading) {
-        const ENGAGE = 0.025, RELEASE = 0.008, REALIGN_BEYOND = 0.3;
-        const IDLE_MS = 3000, STALLED_MS = 30000, SHOW_LOADING_AFTER_MS = 250, SETTLE_MS = 1500;
-        const steering = new WeakSet();
-        const lastSeek = new WeakMap();
-        let raf = 0, running = false;
-        let holding = false, holdStart = 0, shown = false;
-        let lastProgress = 0, progressMark = '';
-        let lastRelease = 0, realigns = [];
-        // Some browsers (iOS) load nothing while a video is paused. If a wait makes no
-        // progress and the browser is not even fetching (or has fetched nothing for a
-        // long time), stop holding for this run: play, and only steer.
-        let degraded = false;
-        const setRate = (v, rate) => { if (v.playbackRate !== rate) v.playbackRate = rate; };
-        const report = on => { if (shown !== on) { shown = on; if (onLoading) onLoading(on); } };
-        const loopLength = () => Math.min(...videos.map(
-            v => (Number.isFinite(v.duration) && v.duration > 0 ? v.duration : Infinity)));
-        const isReady = v => !v.seeking && v.readyState >= 4;
-        const bufferedEnd = v => (v.buffered && v.buffered.length ? v.buffered.end(v.buffered.length - 1) : 0);
-        // Pause the whole row, optionally moving every video to one position, until all are ready.
-        const hold = position => {
-            holding = true;
-            holdStart = lastProgress = performance.now();
-            progressMark = '';
-            videos.forEach(v => {
-                steering.delete(v);
-                setRate(v, 1);
-                if (!v.paused) v.pause();
-                if (position !== undefined && (v.ended || Math.abs(v.currentTime - position) > 0.001)) {
-                    try { v.currentTime = position; } catch (_) {}
-                }
-            });
-        };
-        const release = () => {
-            holding = false;
-            lastRelease = performance.now();
-            report(false);
-            videos.forEach(v => { v.play().catch(() => {}); });
-        };
-        const tick = () => {
-            if (!running) return;
-            raf = requestAnimationFrame(tick);
-            const now = performance.now();
-            if (holding) {
-                videos.forEach(v => { if (!v.paused) v.pause(); });   // e.g. a track swap resuming its video
-                if (videos.every(isReady)) { release(); return; }
-                const mark = videos.map(v => v.readyState + ':' + bufferedEnd(v).toFixed(1)).join('|');
-                if (mark !== progressMark) { progressMark = mark; lastProgress = now; }
-                else {
-                    const fetching = videos.some(v => !isReady(v) && v.networkState === 2);   // NETWORK_LOADING
-                    if (now - lastProgress > (fetching ? STALLED_MS : IDLE_MS)) { degraded = true; release(); return; }
-                }
-                if (now - holdStart > SHOW_LOADING_AFTER_MS) report(true);
-                return;
-            }
-            const ref = getReference();
-            if (!ref) return;
-            if (ref.playbackRate !== 1) { ref.playbackRate = 1; steering.delete(ref); }
-            if (ref.ended || ref.currentTime >= loopLength() - 0.005) { hold(0); return; }
-            if (!degraded && videos.some(v => !v.ended && !v.seeking && v.readyState < 3)) { hold(); return; }
-            if (ref.seeking || ref.readyState < 3) return;
-            let far = false;
-            videos.forEach(v => {
-                if (v === ref || v.ended || v.seeking || v.readyState < 2) return;
-                const drift = v.currentTime - ref.currentTime;
-                const abs = Math.abs(drift);
-                if (abs > REALIGN_BEYOND && now - lastRelease > SETTLE_MS) {
-                    far = true;
-                    if (degraded && now - (lastSeek.get(v) || 0) > 2000) {
-                        lastSeek.set(v, now);
-                        steering.delete(v);
-                        setRate(v, 1);
-                        try { v.currentTime = ref.currentTime; } catch (_) {}
-                        if (v.paused) v.play().catch(() => {});
-                    }
-                    return;
-                }
-                if (steering.has(v) ? abs < RELEASE : abs <= ENGAGE) {
-                    steering.delete(v);
-                    setRate(v, 1);
-                    return;
-                }
-                steering.add(v);
-                const rate = Math.max(0.8, Math.min(1.2, 1 - drift * 1.5));
-                if (Math.abs(v.playbackRate - rate) > 0.01) v.playbackRate = rate;
-            });
-            if (far && !degraded) {
-                // Realign with the row paused. If that keeps being needed, holding is not
-                // helping on this device: stop doing it.
-                realigns = realigns.filter(t => now - t < 10000);
-                realigns.push(now);
-                if (realigns.length > 3) degraded = true;
-                else hold(ref.currentTime);
-            }
-        };
-        videos.forEach(v => v.addEventListener('ended', () => {
-            if (running && !holding && v === getReference()) hold(0);
-        }));
-        return {
-            start() {
-                // preload="metadata" keeps the page light; a row loads fully once it is used
-                videos.forEach(v => { v.loop = false; if (v.preload !== 'auto') v.preload = 'auto'; });
-                running = true;
-                degraded = false;
-                realigns = [];
-                hold(0);
-                cancelAnimationFrame(raf);
-                raf = requestAnimationFrame(tick);
-            },
-            stop() {
-                running = false;
-                holding = false;
-                cancelAnimationFrame(raf);
-                report(false);
-                videos.forEach(v => { steering.delete(v); setRate(v, 1); });
-            },
-        };
-    }
-
     function setupResultPairs() {
         document.querySelectorAll('.result-pair').forEach(pair => {
             const videos = Array.from(pair.querySelectorAll('video'));
             if (!videos.length) return;
-            videos.forEach(v => { v.loop = false; v.muted = true; audioVideos.add(v); });
-            const sync = createRowSync(videos, () => {
-                const cell = pair._audioCell;
-                return (cell && cell.querySelector('video')) || videos[0];
-            }, loading => pair.classList.toggle('is-loading', loading));
+            videos.forEach(v => { v.loop = true; v.muted = true; audioVideos.add(v); });
+            let waiting = 0;   // requestAnimationFrame id while the row waits to start
             const cells = Array.from(pair.querySelectorAll('.result-cell'));
             const defaultCell = cells.find(c => c.classList.contains('result-cell-ours')) || null;
             pair._audioCell = defaultCell;
@@ -2598,13 +2541,28 @@
 
             const startAll = () => {
                 pair.classList.add('is-playing');
-                sync.start();
+                // The one rule: all videos of the row start together, from the beginning. They are
+                // rewound and held until every one of them can play (a few seconds at most), then
+                // started in the same tick. After that each loops on its own; nothing re-aligns them.
+                cancelAnimationFrame(waiting);
+                videos.forEach(v => {
+                    v.pause();
+                    try { v.currentTime = 0; } catch (_) {}
+                    if (v.preload !== 'auto') v.preload = 'auto';
+                });
+                const since = performance.now();
+                const begin = () => {
+                    const ready = videos.every(v => !v.seeking && v.readyState >= 3);
+                    if (!ready && performance.now() - since < 3000) { waiting = requestAnimationFrame(begin); return; }
+                    videos.forEach(v => { v.play().catch(() => {}); });
+                };
+                begin();
                 activePair = pair;
                 applyAudio();
             };
             const stopAll = () => {
                 pair.classList.remove('is-playing');
-                sync.stop();
+                cancelAnimationFrame(waiting);
                 videos.forEach(v => {
                     v.pause();
                     try { v.currentTime = 0; } catch (_) {}
@@ -2644,6 +2602,138 @@
     if (document.readyState === 'complete' || document.readyState === 'interactive') { setupResultPairs(); applyAudio(); }
     else window.addEventListener('DOMContentLoaded', () => { setupResultPairs(); applyAudio(); });
 
+    // Background download of the row videos, one row at a time from the top of the page, so
+    // that a row is already complete when the reader gets to it. (A row otherwise starts
+    // loading when the pointer arrives, and the reader waits for it.) Each file is fetched
+    // whole, at low priority, and handed to its <video> as a blob URL: playing and seeking
+    // then no longer touch the network. A row the reader starts before its turn loads through
+    // the player as before; the queue stands aside meanwhile and comes back to that row
+    // first. Rows inside a collapsed group join the queue when the group is opened. Nothing
+    // is downloaded ahead on a data-saver or 2G connection.
+    function setupRowDownloads() {
+        const connection = navigator.connection;
+        if (connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType || ''))) return;
+        if (!window.fetch || !window.URL || !window.MutationObserver || !window.AbortController) return;
+        const files = new Map();        // file url -> Promise of its blob url (rows share input / ours files)
+        const copies = new Map();       // file url -> blob url, once downloaded
+        // lets the track / version tabs use a downloaded copy when they switch a video
+        window.rowVideoCopy = url => copies.get(new URL(url, location.href).href);
+        const done = new WeakSet();     // rows whose videos play from their downloaded copies
+        const queued = new WeakSet();
+        let queue = [];                 // rows still to download, in page order
+        let running = false, abort = null;
+
+        const sourceUrl = v => {
+            const s = v.querySelector('source');
+            return s && s.getAttribute('src') ? new URL(s.getAttribute('src'), location.href).href : null;
+        };
+        const fetchFile = (url, signal) => {
+            if (!files.has(url)) {
+                const copy = fetch(url, { signal, priority: 'low' })
+                    .then(response => { if (!response.ok) throw new Error('HTTP ' + response.status); return response.blob(); })
+                    .then(blob => { const copy = URL.createObjectURL(blob); copies.set(url, copy); return copy; });
+                copy.catch(() => files.delete(url));   // interrupted or failed: may be fetched again
+                files.set(url, copy);
+            }
+            return files.get(url);
+        };
+        // The row the reader is playing while it is still loading over the network, if any.
+        const streamingRow = () => {
+            const pair = document.querySelector('.result-pair.is-playing');
+            return pair && !done.has(pair) ? pair : null;
+        };
+        // Point the row's videos at their downloaded copies; not while it is playing.
+        const apply = pair => {
+            if (!pair._copies || pair.classList.contains('is-playing')) return;
+            pair._copies.forEach(([v, original, copy]) => {
+                if (sourceUrl(v) !== original) return;   // a track tab switched this video meanwhile
+                v.querySelector('source').src = copy;
+                v.load();
+            });
+            pair._copies = null;
+            done.add(pair);
+        };
+        const pump = async () => {
+            if (running) return;
+            running = true;
+            while (queue.length && !streamingRow()) {
+                const pair = queue.shift();
+                if (done.has(pair) || !pair.isConnected) continue;
+                const videos = Array.from(pair.querySelectorAll('video')).map(v => [v, sourceUrl(v)]).filter(entry => entry[1]);
+                // the videos its track / version tabs switch to, so that switching does not wait either
+                const tabbed = Array.from(document.querySelectorAll(
+                    '.track-tabs[data-for="' + pair.getAttribute('data-scene') + '"] [data-src]'
+                )).map(tab => new URL(tab.getAttribute('data-src') + '.mp4', location.href).href);
+                const controller = abort = new AbortController();
+                try {
+                    const fetched = await Promise.all(videos.map(entry => entry[1]).concat(tabbed)
+                        .map(url => fetchFile(url, controller.signal)));
+                    pair._copies = videos.map((entry, i) => [entry[0], entry[1], fetched[i]]);
+                    apply(pair);                     // if it is playing now, applied when it stops
+                } catch (error) {
+                    if (controller.signal.aborted) queue.unshift(pair);   // made way for the reader: retry later
+                    // any other failure: the row simply keeps loading through the player
+                }
+            }
+            running = false;
+        };
+        const onRowState = pair => {
+            if (pair.classList.contains('is-playing')) {
+                if (!done.has(pair) && abort) abort.abort();   // the reader's row gets the connection
+                return;
+            }
+            apply(pair);
+            if (!done.has(pair) && queued.has(pair)) {
+                queue = [pair].concat(queue.filter(other => other !== pair));   // finish what the reader just watched first
+            }
+            pump();
+        };
+        const enqueue = pair => {
+            if (queued.has(pair)) return;
+            queued.add(pair);
+            queue.push(pair);
+        };
+        const observer = new MutationObserver(records => records.forEach(record => onRowState(record.target)));
+        document.querySelectorAll('.result-pair').forEach(pair => {
+            observer.observe(pair, { attributes: true, attributeFilter: ['class'] });
+            if (!pair.closest('details:not([open])')) enqueue(pair);
+        });
+        // A collapsed group is left alone until the reader opens it; its rows then go first.
+        document.querySelectorAll('details').forEach(group => group.addEventListener('toggle', () => {
+            if (!group.open) return;
+            const rows = Array.from(group.querySelectorAll('.result-pair')).filter(pair => !done.has(pair));
+            rows.forEach(pair => queued.add(pair));
+            queue = rows.concat(queue.filter(pair => !rows.includes(pair)));
+            pump();
+        }));
+        // Let the teaser at the top of the page get going first.
+        const teaser = document.getElementById('teaser-video');
+        let started = false;
+        const start = () => { if (!started) { started = true; pump(); } };
+        if (teaser && teaser.readyState < 4) {
+            teaser.addEventListener('canplaythrough', start, { once: true });
+            setTimeout(start, 4000);
+        } else {
+            start();
+        }
+    }
+    // Videos inside a collapsed group are preload="none": nothing of theirs is fetched while
+    // the group is closed. Once the reader opens it they behave like the visible rows.
+    function setupCollapsedGroups() {
+        document.querySelectorAll('details').forEach(group => group.addEventListener('toggle', () => {
+            if (!group.open) return;
+            group.querySelectorAll('.result-pair video').forEach(v => {
+                if (v.preload !== 'none') return;
+                v.preload = 'metadata';
+                v.load();
+            });
+        }));
+    }
+    if (document.readyState === 'complete' || document.readyState === 'interactive') setupCollapsedGroups();
+    else window.addEventListener('DOMContentLoaded', setupCollapsedGroups);
+    if (document.readyState === 'complete' || document.readyState === 'interactive') setupRowDownloads();
+    else window.addEventListener('DOMContentLoaded', setupRowDownloads);
+
     // Separate-track selector: swap the right video's source, keep time/mute/playing state.
     function setupTrackTabs() {
         document.querySelectorAll('.track-tabs').forEach(tabs => {
@@ -2664,7 +2754,7 @@
                     const base = btn.getAttribute('data-src');
                     const wasPlaying = !video.paused;
                     const t = inputVideo ? inputVideo.currentTime : video.currentTime;
-                    source.src = base + '.mp4';
+                    source.src = (window.rowVideoCopy && window.rowVideoCopy(base + '.mp4')) || base + '.mp4';
                     video.poster = base + '.jpg';
                     if (label) label.textContent = btn.getAttribute('data-label');
                     video.load();
