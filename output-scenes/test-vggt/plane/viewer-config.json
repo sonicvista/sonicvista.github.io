@@ -1,0 +1,40 @@
+{
+  "audio_source_overrides": {
+    "source_000": {
+      "gain": 5.827030681059628,
+      "reference_distance": 1.0
+    },
+    "source_001__grass_0": {
+      "gain": 0.010113511205487686,
+      "reference_distance": 1.0
+    },
+    "source_001__grass_1": {
+      "gain": 0.010113511205487686,
+      "reference_distance": 1.0
+    },
+    "source_001__grass_2": {
+      "gain": 0.010113511205487686,
+      "reference_distance": 1.0
+    },
+    "source_001__grass_3": {
+      "gain": 0.010113511205487686,
+      "reference_distance": 1.0
+    },
+    "source_001__grass_4": {
+      "gain": 0.010113511205487686,
+      "reference_distance": 1.0
+    },
+    "source_001__grass_5": {
+      "gain": 0.010113511205487686,
+      "reference_distance": 1.0
+    },
+    "source_001__grass_6": {
+      "gain": 0.010113511205487686,
+      "reference_distance": 1.0
+    },
+    "source_002": {
+      "gain": 0.03548133892335755,
+      "reference_distance": 1.0
+    }
+  }
+}
