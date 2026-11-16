@@ -1157,10 +1157,12 @@
         /* three videos side by side; --c1..--c3 are the aspect ratios, so the cells share one height */
         .result-pair-three { grid-template-columns: var(--c1, 1fr) var(--c2, 1fr) var(--c3, 1fr); }
         .result-pair-four { grid-template-columns: var(--c1, 1fr) var(--c2, 1fr) var(--c3, 1fr) var(--c4, 1fr); }
+        .result-pair-two { grid-template-columns: var(--c1, 1fr) var(--c2, 1fr); }
         @media (max-width: 520px) {
             .result-pair { grid-template-columns: 1fr; }
             .result-pair-three { grid-template-columns: 1fr; }
             .result-pair-four { grid-template-columns: 1fr 1fr; }
+            .result-pair-two { grid-template-columns: 1fr; }
             .result-pair-multi { grid-template-columns: 1fr 1fr; }
             .result-pair-multi .result-cell-ours { grid-column: 1 / -1; }
         }
@@ -1309,6 +1311,78 @@
                 </div>
 
             </div>
+            <h3 class="results-subtitle">Optional use of the input audio</h3>
+            <p class="caption-center" style="margin-top: 10px; font-style: italic; text-wrap: balance;">By default our method does not use the input video's audio: the input is RGB frames only, and all audio is generated from visual and text conditioning. The framework can optionally incorporate the input audio when it is available: the right column of each row below, including the multi-source example, shows the result. <span class="hint-hover">Hover over a row to play; with <b>Sound</b> on, hover over a video to hear it.</span><span class="hint-tap">Tap a row to play; with <b>Sound</b> on, tap a video to hear it.</span></p>
+            <div class="results-list" id="results-list-input-audio">
+
+                <div class="result-pair result-pair-three" data-scene="input-audio-porsche_4">
+                    <div class="gui-scene-cell result-cell" data-has-audio="1">
+                        <video muted playsinline preload="metadata" loop poster="assets/results/porsche_4/input.jpg"><source src="assets/results/porsche_4/input.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Input video</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell result-cell-ours">
+                        <video muted playsinline preload="metadata" loop poster="assets/results/porsche_4/ours.jpg"><source src="assets/results/porsche_4/ours.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+                        <span class="result-label">Ours w/o input audio</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell result-cell-ours">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/input-audio/porsche_4/ours-input-audio.jpg"><source src="assets/rebuttal/input-audio/porsche_4/ours-input-audio.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+                        <span class="result-label">Ours w/ input audio</span>
+                    </div>
+                </div>
+
+                <div class="result-pair result-pair-three" data-scene="input-audio-tap-dance">
+                    <div class="gui-scene-cell result-cell" data-has-audio="1">
+                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/input.jpg"><source src="assets/results/tap-dance/input.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Input video</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell result-cell-ours">
+                        <video muted playsinline preload="metadata" loop poster="assets/results/tap-dance/ours.jpg"><source src="assets/results/tap-dance/ours.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+                        <span class="result-label">Ours w/o input audio</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell result-cell-ours">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/input-audio/tap-dance/ours-input-audio.jpg"><source src="assets/rebuttal/input-audio/tap-dance/ours-input-audio.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+                        <span class="result-label">Ours w/ input audio</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <h3 class="results-subtitle">Scaling to multiple sound sources</h3>
+            <p class="caption-center" style="margin-top: 10px; font-style: italic; text-wrap: balance;">Three musicians playing three instruments: our method generates and synchronizes three object-level audio tracks, without (middle) or with (right) the input audio. As a proof of concept, each musician&ndash;instrument pair is a static 3D Gaussian reconstructed from a single frame with <a href="https://hygenie1228.github.io/TeHOR/" target="_blank" rel="noopener noreferrer">TeHOR</a>. <span class="hint-hover">Hover over the row to play; with <b>Sound</b> on, hover over a video to hear it.</span><span class="hint-tap">Tap the row to play; with <b>Sound</b> on, tap a video to hear it.</span></p>
+            <div class="results-list" id="results-list-multi-source">
+
+                <div class="result-pair result-pair-three" data-scene="multi-source-instruments" style="--c1: 1890fr; --c2: 1778fr; --c3: 1778fr;">
+                    <div class="gui-scene-cell result-cell" data-has-audio="1">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/multi-source/instruments/input.jpg"><source src="assets/rebuttal/multi-source/instruments/input.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-label">Input video</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell result-cell-ours">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/multi-source/instruments/ours.jpg"><source src="assets/rebuttal/multi-source/instruments/ours.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+                        <span class="result-label">Ours w/o input audio</span>
+                    </div>
+                    <div class="gui-scene-cell result-cell result-cell-ours">
+                        <video muted playsinline preload="metadata" loop poster="assets/rebuttal/multi-source/instruments/ours.jpg"><source src="assets/rebuttal/multi-source/instruments/ours-input-audio.mp4" type="video/mp4"></video>
+                        <div class="gui-scene-play-icon"></div>
+                        <span class="result-audio-badge" aria-hidden="true"><svg class="icon-muted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg><svg class="icon-unmuted" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+                        <span class="result-label">Ours w/ input audio</span>
+                    </div>
+                </div>
+
+            </div>
+
         </section>
 
         <section id="results">
@@ -1316,7 +1390,7 @@
                 <h2>Results</h2>
                 <hr>
             </div>
-            <p class="caption-center" style="margin-top: 10px; font-style: italic;"><span class="hint-hover">Hover over a row to play both videos.</span><span class="hint-tap">Tap a row to play its videos.</span> Left: input monocular video. Right: our novel-view rendering. Turn on <b>Sound</b> in the top bar to hear the binaural audio of the right video (headphones recommended). <span class="hint-hover">If the input has audio, hover over the left video to hear it and the right one to hear ours.</span><span class="hint-tap">If the input has audio, tap the left video to hear it and the right one to hear ours.</span> The input audio is the video's original soundtrack and may be unrelated to its content (e.g. background music); our method does not take it as input.</p>
+            <p class="caption-center" style="margin-top: 10px; font-style: italic;"><span class="hint-hover">Hover over a row to play both videos.</span><span class="hint-tap">Tap a row to play its videos.</span> Left: input monocular video. Right: our novel-view rendering. Turn on <b>Sound</b> in the top bar (headphones recommended): <span class="hint-hover">hovering over</span><span class="hint-tap">tapping</span> the right video plays our binaural audio, and <span class="hint-hover">hovering over</span><span class="hint-tap">tapping</span> the left video plays the input audio, if the input has one. The input audio is provided for reference only: our method does not take it as input, and it may be unrelated to the video content (e.g. background music).</p>
 
             <h3 class="results-subtitle">Single input video</h3>
             <p class="caption-center" style="margin-top: 10px; font-style: italic; text-wrap: balance;">Each scene is reconstructed from one monocular video, which may contain several dynamic sound sources.</p>
