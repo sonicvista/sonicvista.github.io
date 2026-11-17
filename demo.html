@@ -588,7 +588,7 @@
     import * as THREE from 'three';
     // Spark (sparkjs.dev): Gaussian splat rendering on three.js. Every SplatMesh in the
     // scene is drawn in one GPU-sorted pass; splats stay editable through packedSplats.
-    import { SparkRenderer, SplatMesh, setPackedSplat, unpackSplat } from '@sparkjsdev/spark';
+    import { SparkRenderer, SplatMesh, setPackedSplat, unpackSplat, toHalf } from '@sparkjsdev/spark';
     import { DopplerMotion, samplePosition, setDopplerRate, ScenePlaybackClock } from './scripts/assets/viewer_doppler.mjs';
 
     // ─── State ────────────────────────────────────────────────────────────────
@@ -3598,7 +3598,7 @@
     // splat: float16 centre, log-scale bytes, octahedral quaternion, rgba). A frame is
     // applied by rewriting each splat's centre (and, for LHM++, its rotation) in place
     // and flagging the array for re-upload; Spark re-sorts on the GPU every frame.
-    function applyFgDeformation(frameIdx) {
+    function applyFgDeformation(frame) {
       let any = false;
       // Without the CPU sort below, Spark ignores a mapping change while its
       // sort is in flight, so writing the next frame's 160k splats now would
@@ -3608,7 +3608,7 @@
       for (const record of loadedForegroundObjects()) {
         if (!record.deform) continue;
         try {
-          if (applyFgDeformationFor(record, frameIdx) !== false) any = true;
+          if (applyFgDeformationFor(record, frame) !== false) any = true;
         } catch (e) {
           bail(`object ${record.objectId} threw: ${e && e.message ? e.message : e}`);
           if (!record.deformThrowLogged) { record.deformThrowLogged = true; console.warn(`[deform] object ${record.objectId}:`, e); }
@@ -3630,7 +3630,7 @@
     const cpuSort = {
       active: false, driveSort: null,
       dist: null, keys: null, order: null, counts: new Uint32Array(65537),
-      lastCam: new THREE.Vector3(), lastCenters: null, lastCount: 0, range: 0,
+      lastCam: new THREE.Vector3(), lastCenters: null, lastCount: 0, lastVersion: -1, range: 0,
     };
     const _csCam = new THREE.Vector3(), _csInv = new THREE.Matrix4();
     function cpuSortCandidate() {
@@ -3683,10 +3683,13 @@
       camera.updateMatrixWorld();
       camera.getWorldPosition(_csCam).applyMatrix4(_csInv.copy(mesh.matrixWorld).invert());
       const moved = _csCam.distanceTo(cpuSort.lastCam) > 1e-3 * cpuSort.range;
-      if (!moved && cpuSort.lastCenters === centers && cpuSort.lastCount === count) return;
+      const version = record.deformCentersVersion || 0;   // interpolated centres reuse one buffer
+      if (!moved && cpuSort.lastCenters === centers && cpuSort.lastCount === count
+          && cpuSort.lastVersion === version) return;
       cpuSort.lastCam.copy(_csCam);
       cpuSort.lastCenters = centers;
       cpuSort.lastCount = count;
+      cpuSort.lastVersion = version;
 
       if (!cpuSort.dist || cpuSort.dist.length < count) {
         cpuSort.dist = new Float32Array(count);
@@ -3726,7 +3729,6 @@
       tex.needsUpdate = true;
     }
 
-    const _dq = new THREE.Quaternion(), _dqc = new THREE.Quaternion(), _dqs = new THREE.Quaternion();
     function checkDeformationOrder(record, canonicalCenters) {
       // deformed_xyz.npy is indexed by splat: its canonical row must reproduce the
       // cloud's own centres (up to Spark's float16 packing), else the file order differs
@@ -3742,7 +3744,101 @@
         console.warn(`[deform] object ${record.objectId}: the canonical frame of deformed_xyz.npy differs from the loaded cloud by up to ${err.toExponential(2)} (cloud extent ${extent.toExponential(2)}); the splat order may not match`);
       }
     }
-    function applyFgDeformationFor(record, frameIdx) {
+    // A deformed frame only changes each splat's centre and rotation, so only
+    // those fields of Spark's packed splat are rewritten (setPackedSplat would
+    // re-encode colour and scale as well, three logarithms per splat):
+    //   word 1 = centre x | centre y << 16            (float16 each)
+    //   word 2 = centre z | quat u << 16 | quat v << 24
+    //   word 3 = scale bytes (kept) | quat angle << 24
+    // The rotation is Spark's encoding: axis as an octahedral (u, v) byte pair,
+    // angle as one byte. Per-frame rotations (LHM++, deformed_rot.npy holds
+    // (w, x, y, z)): q_splat = q_frame * q_canonical^-1 * q_cloud, and the last
+    // two factors do not depend on the frame, so they are folded into
+    // record.deformRotBasis once.
+    const HALF_BULK = typeof Float16Array !== 'undefined';
+    function writeDeformedSplats(record, arr, count, centers, row, row1, alpha) {
+      const fgDeform = record.deform;
+      if (!record.deformHalf || record.deformHalf.length !== count * 3) {
+        record.deformHalf = new Uint16Array(count * 3);
+        record.deformHalfFloat = HALF_BULK ? new Float16Array(record.deformHalf.buffer) : null;
+      }
+      const half = record.deformHalf;
+      if (record.deformHalfFloat) record.deformHalfFloat.set(centers.length === count * 3 ? centers : centers.subarray(0, count * 3));
+      else for (let i = 0, n = count * 3; i < n; i++) half[i] = toHalf(centers[i]);
+
+      const rf = fgDeform.rot;
+      if (!rf) {
+        for (let i = 0; i < count; i++) {
+          const i3 = i * 3, i4 = i * 4;
+          arr[i4 + 1] = half[i3] | (half[i3 + 1] << 16);
+          arr[i4 + 2] = (arr[i4 + 2] & 0xFFFF0000) | half[i3 + 2];
+        }
+        return;
+      }
+      if (!record.deformRotBasis) {
+        // k = conj(q_canonical) * q_cloud, stored (x, y, z, w)
+        const q0 = record.deformCanonicalQuat, basis = new Float32Array(count * 4);
+        const cbase = fgDeform.canonicalRow * count * 4;
+        for (let i = 0; i < count; i++) {
+          const c = cbase + i * 4, o = i * 4;
+          const ax = -rf[c + 1], ay = -rf[c + 2], az = -rf[c + 3], aw = rf[c];
+          const bx = q0[o], by = q0[o + 1], bz = q0[o + 2], bw = q0[o + 3];
+          basis[o]     = ax * bw + aw * bx + ay * bz - az * by;
+          basis[o + 1] = ay * bw + aw * by + az * bx - ax * bz;
+          basis[o + 2] = az * bw + aw * bz + ax * by - ay * bx;
+          basis[o + 3] = aw * bw - ax * bx - ay * by - az * bz;
+        }
+        record.deformRotBasis = basis;
+      }
+      const basis = record.deformRotBasis;
+      const blend = alpha > 0, rbase = row * count * 4, rbase1 = row1 * count * 4;
+      const ANGLE = 255 / Math.PI;
+      for (let i = 0; i < count; i++) {
+        const o = rbase + i * 4, i3 = i * 3, i4 = i * 4;
+        let fw = rf[o], fx = rf[o + 1], fy = rf[o + 2], fz = rf[o + 3];
+        if (blend) {
+          // normalised lerp along the shorter arc (normalised below)
+          const o1 = rbase1 + i * 4;
+          let gw = rf[o1], gx = rf[o1 + 1], gy = rf[o1 + 2], gz = rf[o1 + 3];
+          if (fw * gw + fx * gx + fy * gy + fz * gz < 0) { gw = -gw; gx = -gx; gy = -gy; gz = -gz; }
+          fw += (gw - fw) * alpha; fx += (gx - fx) * alpha; fy += (gy - fy) * alpha; fz += (gz - fz) * alpha;
+        }
+        const bx = basis[i4], by = basis[i4 + 1], bz = basis[i4 + 2], bw = basis[i4 + 3];
+        let x = fx * bw + fw * bx + fy * bz - fz * by;
+        let y = fy * bw + fw * by + fz * bx - fx * bz;
+        let z = fz * bw + fw * bz + fx * by - fy * bx;
+        let w = fw * bw - fx * bx - fy * by - fz * bz;
+        const norm = Math.sqrt(x * x + y * y + z * z + w * w);
+        if (norm > 0) { const inv = (w < 0 ? -1 : 1) / norm; x *= inv; y *= inv; z *= inv; w *= inv; }
+        else { x = 0; y = 0; z = 0; w = 1; }
+        const axisNorm = Math.sqrt(x * x + y * y + z * z);
+        let px = 1, py = 0;
+        if (axisNorm >= 1e-6) {
+          const sum = Math.abs(x) + Math.abs(y) + Math.abs(z);
+          px = x / sum; py = y / sum;
+          if (z < 0) {
+            const t = px;
+            px = (1 - Math.abs(py)) * (px >= 0 ? 1 : -1);
+            py = (1 - Math.abs(t)) * (py >= 0 ? 1 : -1);
+          }
+        }
+        const u = Math.round((px * 0.5 + 0.5) * 255), v = Math.round((py * 0.5 + 0.5) * 255);
+        const angle = Math.round(2 * Math.acos(w > 1 ? 1 : w) * ANGLE);
+        arr[i4 + 1] = half[i3] | (half[i3 + 1] << 16);
+        arr[i4 + 2] = half[i3 + 2] | (u << 16) | (v << 24);
+        arr[i4 + 3] = (arr[i4 + 3] & 0x00FFFFFF) | (angle << 24);
+      }
+    }
+
+    // The deformation is exported per input-video frame (20-30 fps). Between two
+    // frames every splat is blended: centres linearly, per-splat rotations by
+    // normalised lerp, so the cloud moves at the display rate like the rigid
+    // pose does. An update rewrites the whole cloud and re-sorts it, so during
+    // playback it runs at most about 60 times a second, and less often when
+    // one update takes more than two thirds of that interval.
+    const DEFORM_MIN_INTERVAL_MS = 12;
+    const deformTiming = { costMs: 0, updates: 0 };
+    function applyFgDeformationFor(record, frame) {
       const fgDeform = record.deform;
       const mesh = record.mesh;
       const packed = mesh && mesh.packedSplats;
@@ -3781,39 +3877,58 @@
         record.deformCanonicalRgba = rgba;
         checkDeformationOrder(record, centers);
       }
-      const clamped = Math.max(0, Math.min(frameIdx, fgDeform.maxFrame));
-      const row = fgDeformEnabled ? fgDeform.rowForFrame[clamped] : -1;
-      const key = String(row);
+      const clamped = Math.max(0, Math.min(frame, fgDeform.maxFrame));
+      const f0 = Math.floor(clamped), f1 = Math.min(f0 + 1, fgDeform.maxFrame);
+      const row = fgDeformEnabled ? fgDeform.rowForFrame[f0] : -1;
+      const row1 = fgDeformEnabled ? fgDeform.rowForFrame[f1] : -1;
+      let alpha = row >= 0 && row1 !== row ? clamped - f0 : 0;
+      if (alpha < 1e-4) alpha = 0;
+      const blend = alpha > 0;
+      const key = blend ? `${row}+${row1}@${alpha.toFixed(4)}` : String(row);
       if (key === record.deformAppliedKey) return;
+      // Playback only: a pose that is at rest (paused, scrubbed, last frame) is always exact.
+      const startedAt = performance.now();
+      if (isPlaying && !isScrubbing && record.deformAppliedKey != null
+          && startedAt - (record.deformAppliedAt || 0) < Math.max(DEFORM_MIN_INTERVAL_MS, 1.5 * deformTiming.costMs)) {
+        return;
+      }
       record.deformAppliedKey = key;
-      const src = row >= 0
+      record.deformAppliedAt = startedAt;
+      record.deformBlend = { row, row1, alpha };
+      let src = row >= 0
         ? fgDeform.xyz.subarray(row * count * 3, (row + 1) * count * 3)
         : record.deformCanonical;
-      const sc = record.deformCanonicalScales, q0 = record.deformCanonicalQuat, rgba = record.deformCanonicalRgba;
-      const enc = packed.splatEncoding;
-      // per-frame rotations (LHM++): q_frame_splat = dR * q_canonical_splat with
-      // dR = R(q_frame) * R(q_canonical)^-1; deformed_rot.npy holds (w, x, y, z)
-      const rotate = !!(fgDeform.rot && row >= 0 && row !== fgDeform.canonicalRow);
-      const rf = fgDeform.rot, rbase = row * count * 4, cbase = fgDeform.canonicalRow * count * 4;
-      for (let i = 0; i < count; i++) {
-        let qx = q0[i * 4], qy = q0[i * 4 + 1], qz = q0[i * 4 + 2], qw = q0[i * 4 + 3];
-        if (rotate) {
-          const o = rbase + i * 4, c = cbase + i * 4;
-          _dq.set(rf[o + 1], rf[o + 2], rf[o + 3], rf[o]);
-          _dqc.set(rf[c + 1], rf[c + 2], rf[c + 3], rf[c]).invert();
-          _dq.multiply(_dqc);
-          _dqs.set(qx, qy, qz, qw).premultiply(_dq).normalize();
-          qx = _dqs.x; qy = _dqs.y; qz = _dqs.z; qw = _dqs.w;
+      if (blend) {
+        const a = src, b = fgDeform.xyz.subarray(row1 * count * 3, (row1 + 1) * count * 3);
+        if (!record.deformBlendCenters || record.deformBlendCenters.length !== count * 3) {
+          record.deformBlendCenters = new Float32Array(count * 3);
         }
-        setPackedSplat(arr, i,
-          src[i * 3], src[i * 3 + 1], src[i * 3 + 2],
-          sc[i * 3], sc[i * 3 + 1], sc[i * 3 + 2],
-          qx, qy, qz, qw,
-          rgba[i * 4 + 3], rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2],
-          enc);
+        const out = record.deformBlendCenters;
+        for (let i = 0, n = count * 3; i < n; i++) out[i] = a[i] + (b[i] - a[i]) * alpha;
+        src = out;
+      }
+      if (row < 0) {
+        // deformation switched off: put the pristine cloud back
+        const sc = record.deformCanonicalScales, q0 = record.deformCanonicalQuat, rgba = record.deformCanonicalRgba;
+        const enc = packed.splatEncoding;
+        for (let i = 0; i < count; i++) {
+          setPackedSplat(arr, i,
+            src[i * 3], src[i * 3 + 1], src[i * 3 + 2],
+            sc[i * 3], sc[i * 3 + 1], sc[i * 3 + 2],
+            q0[i * 4], q0[i * 4 + 1], q0[i * 4 + 2], q0[i * 4 + 3],
+            rgba[i * 4 + 3], rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2],
+            enc);
+        }
+      } else {
+        writeDeformedSplats(record, arr, count, src, row, row1, alpha);
       }
       packed.needsUpdate = true;
       record.deformCurrentCenters = src;
+      record.deformCentersVersion = (record.deformCentersVersion || 0) + 1;
+      // cost of one update (write only; the depth sort runs later in the tick)
+      const cost = performance.now() - startedAt;
+      deformTiming.costMs = deformTiming.updates ? deformTiming.costMs * 0.8 + cost * 0.2 : cost;
+      deformTiming.updates += 1;
       // With the CPU sort below in charge, the new frame's order is written in
       // this same tick, so the edit can show at once (updateVersion). Otherwise
       // bump the *mapping* version: Spark shows a version-only edit immediately
@@ -3831,6 +3946,7 @@
       record.deformCanonicalScales = null;
       record.deformCanonicalQuat = null;
       record.deformCanonicalRgba = null;
+      record.deformRotBasis = null;
       record.deformAppliedKey = null;
     }
 
@@ -3850,7 +3966,7 @@
       // object entirely rather than just skipping the deformation.
       if (hasFg && fgVisible) {
         try {
-          applyFgDeformation(frameIdx);
+          applyFgDeformation(frameT);
         } catch (e) {
           bail(`threw: ${e && e.message ? e.message : e}`);
         }
@@ -4721,6 +4837,9 @@
             deformFrames: record.deform ? record.deform.frames : null,
             enabled: fgDeformEnabled,
             lastBail: fgDeformBail,
+            blend: record.deformBlend || null,          // rows and weight of the pose on screen
+            updateCostMs: deformTiming.costMs,
+            updates: deformTiming.updates,
           };
         });
       },
